@@ -130,7 +130,7 @@ if __name__ == "__main__":
         os.remove(log_file_path)
         print(f"Log file '{log_file_path}' deleted successfully.")
     else:
-        print(f"Log file '{log_file_path}' not found.")
+        print(f"Log file '{log_file_path}' not found, file will be created instead.")
    
     logger = logging.getLogger(__name__)
     logging.basicConfig(filename='crawlerLog.log', level=logging.INFO)
