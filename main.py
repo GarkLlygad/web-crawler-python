@@ -71,7 +71,6 @@ class Crawler:
                     source_url = cur.fetchone()[0]
                     # Inserting the final values into the database
                     cur.execute(f"INSERT INTO crawls VALUES('{url}', '{source_url}', {response.status_code}, '{response_hash}')")
-                    con.commit()
                     logger.info(f"Saved fetched url {url} to database")
                 except sqlite3.Error as e:
                     logger.warning(f"DB Error: {e}")
@@ -89,7 +88,6 @@ class Crawler:
                                 try:
                                     # Adding each found url into a table in the databse with the current url so it can be fetched as to where a url was found
                                     cur.execute(f"INSERT INTO links VALUES('{abs_url}', '{url}')")
-                                    con.commit()
                                 except sqlite3.Error as e:
                                     logger.warning(f"DB Error: {e}")
                             else:
@@ -98,7 +96,6 @@ class Crawler:
                         try:
                             # Adding each found url into a table in the databse with the current url so it can be fetched as to where a url was found
                             cur.execute(f"INSERT INTO links VALUES('{abs_url}', '{url}')")
-                            con.commit()
                         except sqlite3.Error as e:
                             logger.warning(f"DB Error: {e}")
                    
@@ -106,7 +103,6 @@ class Crawler:
                 logger.warning(f'Exception encountered: {error}')
                 continue
             finally:
-                con.commit()
                 self.visited.add(url)
                 logger.warning(self.visited)
                 time.sleep(self.crawl_delay)
@@ -118,11 +114,9 @@ if __name__ == "__main__":
     # Clearing out the tables if they exist to allow for clean data entry
     con.execute("DROP TABLE IF EXISTS crawls")
     con.execute("DROP TABLE IF EXISTS links")
-    con.commit()
 
     cur = con.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS crawls (url TEXT, extract_url TEXT, status_code INTEGER, payload_hash TEXT)")
-    con.commit()
    
    # Can be cleaned removed without issue if appending to previous logs is desired
     log_file_path = 'crawlerLog.log'
@@ -139,12 +133,11 @@ if __name__ == "__main__":
     start_url = "https://archive-it.org/"
     cur.execute("CREATE TABLE IF NOT EXISTS links (url TEXT, source_url TEXT)")
     cur.execute(f"INSERT INTO links VALUES('{start_url}', '{start_url}')")
-    con.commit()
 
     logger.info(f"Using: {start_url} as starting URL")
 
     crawler = Crawler(start_url)
-    crawler.crawl(max_pages=3)
+    crawler.crawl(max_pages=5)
 
     logger.info(f"Finished at {time.strftime('%x%X%Z')}")
     print(f"Finished at {time.strftime('%x%X%Z')}")
