@@ -2,7 +2,6 @@ import os
 import requests
 import time
 import hashlib
-import csv
 import tldextract
 import logging
 import sqlite3
@@ -46,7 +45,7 @@ class Crawler:
         while self.queue and len(self.visited) < max_pages:
             url = self.queue.popleft()
 
-            logger.warning(f"Start of crawl function, current url is {url}")
+            logger.info(f"Start of crawl function, current url is {url}")
             # Commented out because of can_fetch not working as it should
             # if url in self.visited or not self.allowed(url):
                 # continue
@@ -104,21 +103,16 @@ class Crawler:
                 continue
             finally:
                 self.visited.add(url)
-                logger.warning(self.visited)
+                logger.info(self.visited)
                 time.sleep(self.crawl_delay)
 
 if __name__ == "__main__":
+    START_URL = "https://archive-it.org/"
+    MAX_PAGES = 5
+
     print(f"Started at {time.strftime('%x%X%Z')}")
-
-    con = sqlite3.connect("crawler.db")
-    # Clearing out the tables if they exist to allow for clean data entry
-    con.execute("DROP TABLE IF EXISTS crawls")
-    con.execute("DROP TABLE IF EXISTS links")
-
-    cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS crawls (url TEXT, extract_url TEXT, status_code INTEGER, payload_hash TEXT)")
-   
-   # Can be cleaned removed without issue if appending to previous logs is desired
+    
+    # Can be cleanly removed without issue if appending to previous logs is desired
     log_file_path = 'crawlerLog.log'
     if os.path.exists(log_file_path):
         os.remove(log_file_path)
@@ -130,14 +124,21 @@ if __name__ == "__main__":
     logging.basicConfig(filename='crawlerLog.log', level=logging.INFO)
     logger.info(f"Started at {time.strftime('%x%X%Z')}")
 
-    start_url = "https://archive-it.org/"
+    con = sqlite3.connect("crawler.db")
+    # Clearing out the tables if they exist to allow for clean data entry
+    con.execute("DROP TABLE IF EXISTS crawls")
+    con.execute("DROP TABLE IF EXISTS links")
+
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS crawls (url TEXT, extract_url TEXT, status_code INTEGER, payload_hash TEXT)")
+
     cur.execute("CREATE TABLE IF NOT EXISTS links (url TEXT, source_url TEXT)")
-    cur.execute(f"INSERT INTO links VALUES('{start_url}', '{start_url}')")
+    cur.execute(f"INSERT INTO links VALUES('{START_URL}', '{START_URL}')")
 
-    logger.info(f"Using: {start_url} as starting URL")
+    logger.info(f"Using: {START_URL} as starting URL")
 
-    crawler = Crawler(start_url)
-    crawler.crawl(max_pages=5)
+    crawler = Crawler(START_URL)
+    crawler.crawl(max_pages=MAX_PAGES)
 
     logger.info(f"Finished at {time.strftime('%x%X%Z')}")
     print(f"Finished at {time.strftime('%x%X%Z')}")
