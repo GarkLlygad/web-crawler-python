@@ -5,8 +5,8 @@ import hashlib
 import tldextract
 import logging
 import sqlite3
+import robots
 from urllib.parse import urljoin, urlparse
-from urllib.robotparser import RobotFileParser
 from collections import deque
 from bs4 import BeautifulSoup
 
@@ -18,11 +18,11 @@ class Crawler:
         self.domain = urlparse(start_url).netloc
         self.robots = self.get_robots_parser(start_url)
         self.crawl_delay = self.get_crawl_delay()
-       
+
     def get_robots_parser(self, url):
         parsed = urlparse(url)
         robots_url = f"{parsed.scheme}://{parsed.netloc}/robots.txt"
-        rp = RobotFileParser()
+        rp = robots.RobotFileParser()
         rp.set_url(robots_url)
         try:
             rp.read()
@@ -47,10 +47,14 @@ class Crawler:
 
             logger.info(f"Start of crawl function, current url is {url}")
             # Commented out because of can_fetch not working as it should
-            # if url in self.visited or not self.allowed(url):
-                # continue
             if url in self.visited:
+                logger.info(f'Skipping {url} because it has been visited')
                 continue
+            if not self.allowed(url):
+                logger.warning(f'{url} does not allow fetching')
+                continue
+            # if url in self.visited:
+                # continue
 
             try:
                 logger.info(f'Fetching: {url}')
@@ -61,7 +65,7 @@ class Crawler:
                     logger.warning(f'Fetched {url} with status code of: {response.status_code} or found a non text/html content type')
                     self.visited.add(url)
                     continue
-               
+
                 logger.info(f'Fetched {url} with status code of: {response.status_code} with a sha3 hash of {response_hash}')
 
                 try:
@@ -73,7 +77,7 @@ class Crawler:
                     logger.info(f"Saved fetched url {url} to database")
                 except sqlite3.Error as e:
                     logger.warning(f"DB Error: {e}")
-               
+
                 soup = BeautifulSoup(response.text, 'html.parser')
                 for link in soup.find_all('a', href=True):
                     abs_url = urljoin(url, link['href'])
@@ -97,7 +101,7 @@ class Crawler:
                             cur.execute(f"INSERT INTO links VALUES('{abs_url}', '{url}')")
                         except sqlite3.Error as e:
                             logger.warning(f"DB Error: {e}")
-                   
+
             except Exception as error:
                 logger.warning(f'Exception encountered: {error}')
                 continue
@@ -110,8 +114,8 @@ if __name__ == "__main__":
     START_URL = "https://archive-it.org/"
     MAX_PAGES = 5
 
-    print(f"Started at {time.strftime('%x%X%Z')}")
-    
+    print(f"Started at {time.strftime('%x %X %Z')}")
+
     # Can be cleanly removed without issue if appending to previous logs is desired
     log_file_path = 'crawlerLog.log'
     if os.path.exists(log_file_path):
@@ -119,10 +123,10 @@ if __name__ == "__main__":
         print(f"Log file '{log_file_path}' deleted successfully.")
     else:
         print(f"Log file '{log_file_path}' not found, file will be created instead.")
-   
+
     logger = logging.getLogger(__name__)
     logging.basicConfig(filename='crawlerLog.log', level=logging.INFO)
-    logger.info(f"Started at {time.strftime('%x%X%Z')}")
+    logger.info(f"Started at {time.strftime('%x %X %Z')}")
 
     con = sqlite3.connect("crawler.db")
     # Clearing out the tables if they exist to allow for clean data entry
@@ -140,7 +144,7 @@ if __name__ == "__main__":
     crawler = Crawler(START_URL)
     crawler.crawl(max_pages=MAX_PAGES)
 
-    logger.info(f"Finished at {time.strftime('%x%X%Z')}")
-    print(f"Finished at {time.strftime('%x%X%Z')}")
+    logger.info(f"Finished at {time.strftime('%x %X %Z')}")
+    print(f"Finished at {time.strftime('%x %X %Z')}")
     con.commit()
     con.close()
